@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
 import { validateDto } from '../../middlewares/validation';
+import { createRateLimiter } from '../../middlewares/rateLimiter';
 import { CreateTicketDto } from '../../dtos/ticket.dto';
 import { ticketController } from '../../controllers/ticket.controller';
+
+// Stricter limit for ticket creation: 20 requests per minute per IP
+const createTicketLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
 
 const router = Router();
 
@@ -61,6 +65,7 @@ const router = Router();
  */
 router.post(
   '/',
+  createTicketLimiter,
   validateDto(CreateTicketDto),
   asyncHandler(ticketController.create.bind(ticketController))
 );
