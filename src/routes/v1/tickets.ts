@@ -26,24 +26,9 @@ const router = Router();
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/CreateTicketDto'
- *           examples:
- *             basic:
- *               summary: Basic ticket
- *               value:
- *                 title: "Login page not loading"
- *                 content: "When I try to access the login page, it shows a blank screen."
- *                 status: "OPEN"
- *                 category: "Bug"
- *             full:
- *               summary: Ticket with all fields
- *               value:
- *                 title: "Payment processing failed"
- *                 content: "Customer reported that payment gateway times out after 30 seconds."
- *                 status: "OPEN"
- *                 category: "Bug"
- *                 tag: "payment"
- *                 sentiment: -1
- *                 urgency: "high"
+ *           example:
+ *             title: "Login page not loading"
+ *             content: "When I try to access the login page, it shows a blank screen."
  *     responses:
  *       201:
  *         description: Ticket created successfully
@@ -69,7 +54,7 @@ const router = Router();
  *               success: false
  *               data: null
  *               message: Validation failed
- *               error: "Title is required; Status must be one of: OPEN, IN_PROGRESS, RESOLVED, CLOSED"
+ *               error: "Title is required"
  *               timestamp: "2026-01-30T10:30:00.000Z"
  *       500:
  *         $ref: '#/components/responses/InternalServerError'

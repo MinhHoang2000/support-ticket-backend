@@ -1,9 +1,6 @@
 import {
   IsString,
   IsNotEmpty,
-  IsEnum,
-  IsOptional,
-  IsInt,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -33,8 +30,6 @@ export enum TicketStatus {
  *       required:
  *         - title
  *         - content
- *         - status
- *         - category
  *       properties:
  *         title:
  *           type: string
@@ -47,29 +42,6 @@ export enum TicketStatus {
  *           minLength: 1
  *           description: The detailed content/description of the ticket
  *           example: "When I try to access the login page, it shows a blank screen."
- *         status:
- *           $ref: '#/components/schemas/TicketStatus'
- *           example: "OPEN"
- *         category:
- *           type: string
- *           minLength: 1
- *           maxLength: 100
- *           description: The category of the ticket
- *           example: "Bug"
- *         tag:
- *           type: string
- *           maxLength: 50
- *           description: Optional tag for the ticket
- *           example: "frontend"
- *         sentiment:
- *           type: integer
- *           description: Optional sentiment score
- *           example: -1
- *         urgency:
- *           type: string
- *           maxLength: 50
- *           description: Optional urgency level
- *           example: "high"
  */
 export class CreateTicketDto {
   @IsString()
@@ -82,32 +54,6 @@ export class CreateTicketDto {
   @IsNotEmpty({ message: 'Content is required' })
   @MinLength(1, { message: 'Content must not be empty' })
   content!: string;
-
-  @IsEnum(TicketStatus, {
-    message: 'Status must be one of: OPEN, IN_PROGRESS, RESOLVED, CLOSED',
-  })
-  @IsNotEmpty({ message: 'Status is required' })
-  status!: TicketStatus;
-
-  @IsString()
-  @IsNotEmpty({ message: 'Category is required' })
-  @MinLength(1, { message: 'Category must not be empty' })
-  @MaxLength(100, { message: 'Category must not exceed 100 characters' })
-  category!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50, { message: 'Tag must not exceed 50 characters' })
-  tag?: string;
-
-  @IsOptional()
-  @IsInt({ message: 'Sentiment must be an integer' })
-  sentiment?: number;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50, { message: 'Urgency must not exceed 50 characters' })
-  urgency?: string;
 }
 
 /**

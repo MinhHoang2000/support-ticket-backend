@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { CreateTicketDto } from '../dtos/ticket.dto';
+import { CreateTicketDto, TicketStatus } from '../dtos/ticket.dto';
 import { Ticket } from '@prisma/client';
 
 export class TicketService {
@@ -11,11 +11,11 @@ export class TicketService {
       data: {
         title: data.title,
         content: data.content,
-        status: data.status,
-        category: data.category,
-        tag: data.tag,
-        sentiment: data.sentiment,
-        urgency: data.urgency,
+        status: TicketStatus.OPEN,
+        category: null,
+        tag: null,
+        sentiment: null,
+        urgency: null,
       },
     });
   }

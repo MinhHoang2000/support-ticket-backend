@@ -1,10 +1,12 @@
+# Development-only Compose: backend runs with nodemon; code changes restart the process (no image rebuild).
+# Usage: docker compose -f docker-compose.dev.yml up --build
+
 version: '3.8'
 
 services:
-  # Database runs first; backend waits for healthy DB, then runs migrations, then starts.
   db:
     image: postgres:16-alpine
-    container_name: tickets_db
+    container_name: tickets_db_dev
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -12,7 +14,7 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
@@ -23,21 +25,17 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: tickets_backend
-    develop:
-      watch:
-        - action: rebuild
-          path: .
+      dockerfile: Dockerfile.dev
+    container_name: tickets_backend_dev
     environment:
       PORT: ${PORT:-3000}
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_NAME: ${DB_NAME:-tickets_db}
-      # Use host "db" inside the container; .env can use localhost for Prisma CLI on host
       DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-tickets_db}"
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
@@ -46,8 +44,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
+      # Mount source so edits on host trigger nodemon restart in container
       - ./src:/app/src
-      - ./dist:/app/dist
+      # Mount Prisma so schema/migration changes are visible (run `npx prisma generate` in container if schema changes)
+      - ./prisma:/app/prisma
+      # Mount nodemon config so watch/polling settings match host
+      - ./nodemon.json:/app/nodemon.json
+    command: npm run dev
 
 volumes:
-  postgres_data:
+  postgres_data_dev:
