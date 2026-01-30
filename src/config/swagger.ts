@@ -39,10 +39,10 @@ const options: swaggerJsdoc.Options = {
               description: 'Response message',
               example: 'Success',
             },
-            error: {
+            errorCode: {
               type: 'string',
               nullable: true,
-              description: 'Error message if any',
+              description: 'Internal error code (e.g. VALIDATION_ERROR). Never includes stack or internal details.',
               example: null,
             },
             timestamp: {
@@ -87,9 +87,10 @@ const options: swaggerJsdoc.Options = {
               type: 'string',
               example: 'An error occurred',
             },
-            error: {
+            errorCode: {
               type: 'string',
-              example: 'Error details',
+              description: 'Internal error code (e.g. VALIDATION_ERROR, NOT_FOUND)',
+              example: 'VALIDATION_ERROR',
             },
             timestamp: {
               type: 'string',

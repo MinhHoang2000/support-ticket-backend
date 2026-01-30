@@ -9,7 +9,7 @@ router.use('/tickets', ticketsRouter);
 
 /**
  * @swagger
- * /api/v1/health:
+ * /health:
  *   get:
  *     summary: Health check endpoint (v1)
  *     tags: [Health]

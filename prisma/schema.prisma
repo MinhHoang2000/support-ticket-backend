@@ -23,7 +23,7 @@ model Ticket {
   content   String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  status    TicketStatus?
+  status    TicketStatus
   category  String?
   tag       String?
   sentiment Int?

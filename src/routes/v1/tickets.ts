@@ -15,7 +15,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/v1/tickets:
+ * /tickets:
  *   post:
  *     summary: Create a new ticket
  *     tags: [Tickets]
@@ -53,8 +53,8 @@ const router = Router();
  *             example:
  *               success: false
  *               data: null
- *               message: Validation failed
- *               error: "Title is required"
+ *               message: Validation failed. Please check your input.
+ *               errorCode: VALIDATION_ERROR
  *               timestamp: "2026-01-30T10:30:00.000Z"
  *       500:
  *         $ref: '#/components/responses/InternalServerError'

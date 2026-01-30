@@ -74,8 +74,8 @@ describe('validateDto middleware', () => {
 
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockResponse.badRequest).toHaveBeenCalledWith(
-        'Validation failed',
-        expect.stringContaining('Title')
+        'Validation failed. Please check your input.',
+        'VALIDATION_ERROR'
       );
     });
 
@@ -94,8 +94,8 @@ describe('validateDto middleware', () => {
 
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockResponse.badRequest).toHaveBeenCalledWith(
-        'Validation failed',
-        expect.stringContaining('Content')
+        'Validation failed. Please check your input.',
+        'VALIDATION_ERROR'
       );
     });
 
@@ -115,8 +115,8 @@ describe('validateDto middleware', () => {
 
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockResponse.badRequest).toHaveBeenCalledWith(
-        'Validation failed',
-        expect.stringContaining('Status must be one of')
+        'Validation failed. Please check your input.',
+        'VALIDATION_ERROR'
       );
     });
 
@@ -135,8 +135,8 @@ describe('validateDto middleware', () => {
 
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockResponse.badRequest).toHaveBeenCalledWith(
-        'Validation failed',
-        expect.stringContaining('Category')
+        'Validation failed. Please check your input.',
+        'VALIDATION_ERROR'
       );
     });
 
@@ -156,8 +156,8 @@ describe('validateDto middleware', () => {
 
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockResponse.badRequest).toHaveBeenCalledWith(
-        'Validation failed',
-        expect.stringContaining('255')
+        'Validation failed. Please check your input.',
+        'VALIDATION_ERROR'
       );
     });
 
@@ -178,8 +178,8 @@ describe('validateDto middleware', () => {
 
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockResponse.badRequest).toHaveBeenCalledWith(
-        'Validation failed',
-        expect.stringContaining('Sentiment')
+        'Validation failed. Please check your input.',
+        'VALIDATION_ERROR'
       );
     });
 

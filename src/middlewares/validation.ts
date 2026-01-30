@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { validate, ValidationError } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
+import { ErrorCodes } from '../constants/errorCodes';
 
 /**
  * Validation middleware factory
@@ -24,10 +25,11 @@ export function validateDto<T extends object>(
     });
 
     if (errors.length > 0) {
-      // Format validation errors
+      // Log validation details server-side only; never send to client
       const formattedErrors = formatValidationErrors(errors);
+      console.warn('Validation failed:', { errors: formattedErrors, path: req.path });
 
-      res.badRequest('Validation failed', formattedErrors.join('; '));
+      res.badRequest(ErrorCodes.VALIDATION_ERROR.message, ErrorCodes.VALIDATION_ERROR.code);
       return;
     }
 

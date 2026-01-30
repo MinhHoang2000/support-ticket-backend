@@ -1,24 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
 import { ResponseHelper } from '../utils/response';
+import { ErrorCodes, ErrorCodeName } from '../constants/errorCodes';
 
 export interface AppError extends Error {
   statusCode?: number;
   isOperational?: boolean;
+  errorCode?: string;
 }
 
 export class CustomError extends Error implements AppError {
   statusCode: number;
   isOperational: boolean;
+  errorCode: string;
+  /** General user-facing message (from ErrorCodes or override). Never includes stack. */
+  publicMessage: string;
 
-  constructor(message: string, statusCode: number = 500, isOperational: boolean = true) {
+  constructor(
+    errorCode: ErrorCodeName,
+    options?: { messageOverride?: string; statusCodeOverride?: number; isOperational?: boolean }
+  ) {
+    const def = ErrorCodes[errorCode];
+    const message = options?.messageOverride ?? def.message;
     super(message);
-    this.statusCode = statusCode;
-    this.isOperational = isOperational;
+    this.name = 'CustomError';
+    this.statusCode = options?.statusCodeOverride ?? def.statusCode;
+    this.isOperational = options?.isOperational ?? true;
+    this.errorCode = def.code;
+    this.publicMessage = message;
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-// Global error handler middleware
+// Global error handler middleware - never sends stack or internal details in API response
 export const errorHandler = (
   err: AppError | Error,
   req: Request,
@@ -27,34 +40,36 @@ export const errorHandler = (
 ): void => {
   const NODE_ENV = process.env.NODE_ENV || 'development';
 
-  // Log error details
+  // Log error details (stack only in logs, never in response)
   console.error('Error:', {
     message: err.message,
-    stack: NODE_ENV === 'development' ? err.stack : undefined,
+    stack: NODE_ENV === 'development' ? (err as Error).stack : undefined,
     statusCode: (err as AppError).statusCode,
+    errorCode: (err as AppError).errorCode,
     path: req.path,
     method: req.method,
   });
 
-  // Determine status code
-  const statusCode = (err as AppError).statusCode || 500;
-  const isOperational = (err as AppError).isOperational !== false;
+  const appErr = err as AppError;
+  const statusCode = appErr.statusCode ?? 500;
 
-  // Prepare error message
-  let message = err.message || 'An unexpected error occurred';
-  
-  // In production, don't expose internal error details
-  if (NODE_ENV === 'production' && !isOperational) {
-    message = 'An unexpected error occurred. Please try again later.';
-  }
+  // Use only general message and errorCode - never expose stack or internal details
+  const message =
+    err instanceof CustomError ? err.publicMessage : ErrorCodes.INTERNAL_ERROR.message;
+  const errorCode =
+    err instanceof CustomError ? err.errorCode : ErrorCodes.INTERNAL_ERROR.code;
 
-  // Send error response using standardized format
-  ResponseHelper.error(res, message, statusCode, NODE_ENV === 'development' ? err.message : undefined);
+  ResponseHelper.error(res, message, statusCode, errorCode);
 };
 
 // 404 handler for unknown routes
 export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
-  ResponseHelper.notFound(res, `Route ${req.method} ${req.path} not found`);
+  ResponseHelper.error(
+    res,
+    ErrorCodes.NOT_FOUND.message,
+    ErrorCodes.NOT_FOUND.statusCode,
+    ErrorCodes.NOT_FOUND.code
+  );
 };
 
 /**
@@ -63,7 +78,7 @@ export const notFoundHandler = (req: Request, res: Response, next: NextFunction)
  * Usage example:
  * app.get('/users/:id', asyncHandler(async (req, res) => {
  *   const user = await getUserById(req.params.id);
- *   if (!user) throw new CustomError('User not found', 404);
+ *   if (!user) throw new CustomError('NOT_FOUND');
  *   res.success(user, 'User retrieved successfully');
  * }));
  */

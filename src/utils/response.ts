@@ -12,41 +12,42 @@ export class ResponseHelper {
       success: true,
       data,
       message,
-      error: null,
+      errorCode: null,
       timestamp: new Date().toISOString(),
     };
     return res.status(statusCode).json(response);
   }
 
+  /** Sends error response with general message and errorCode. Never includes stack or internal details. */
   static error(
     res: Response,
     message: string = 'An error occurred',
     statusCode: number = 500,
-    error?: string
+    errorCode?: string
   ): Response {
     const response: ApiResponse = {
       success: false,
       data: undefined,
       message,
-      error: error || message,
+      errorCode: errorCode ?? null,
       timestamp: new Date().toISOString(),
     };
     return res.status(statusCode).json(response);
   }
 
-  static notFound(res: Response, message: string = 'Resource not found'): Response {
-    return this.error(res, message, 404);
+  static notFound(res: Response, message?: string, errorCode?: string): Response {
+    return this.error(res, message ?? 'The requested resource was not found.', 404, errorCode ?? 'NOT_FOUND');
   }
 
-  static badRequest(res: Response, message: string = 'Bad request', error?: string): Response {
-    return this.error(res, message, 400, error);
+  static badRequest(res: Response, message?: string, errorCode?: string): Response {
+    return this.error(res, message ?? 'The request is invalid.', 400, errorCode ?? 'BAD_REQUEST');
   }
 
-  static unauthorized(res: Response, message: string = 'Unauthorized'): Response {
-    return this.error(res, message, 401);
+  static unauthorized(res: Response, message?: string, errorCode?: string): Response {
+    return this.error(res, message ?? 'Authentication is required.', 401, errorCode ?? 'UNAUTHORIZED');
   }
 
-  static forbidden(res: Response, message: string = 'Forbidden'): Response {
-    return this.error(res, message, 403);
+  static forbidden(res: Response, message?: string, errorCode?: string): Response {
+    return this.error(res, message ?? 'You do not have permission.', 403, errorCode ?? 'FORBIDDEN');
   }
 }
