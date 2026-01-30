@@ -20,6 +20,21 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: tickets_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -39,10 +54,15 @@ services:
       DB_NAME: ${DB_NAME:-tickets_db}
       # Use host "db" inside the container; .env can use localhost for Prisma CLI on host
       DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-tickets_db}"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
     volumes:
@@ -51,3 +71,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

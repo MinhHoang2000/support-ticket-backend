@@ -1,4 +1,4 @@
-import rateLimit, { Options } from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator, Options } from 'express-rate-limit';
 import { Request, Response } from 'express';
 import { ResponseHelper } from '../utils/response';
 import { ErrorCodes } from '../constants/errorCodes';
@@ -38,7 +38,7 @@ const defaultHandler = (req: Request, res: Response) => {
 export const defaultRateLimiter = rateLimit({
   windowMs: DEFAULT_WINDOW_MS,
   max: DEFAULT_MAX,
-  keyGenerator: getClientIp,
+  keyGenerator: (req, res) => ipKeyGenerator(getClientIp(req)),
   standardHeaders: true,
   legacyHeaders: false,
   handler: defaultHandler,
@@ -71,7 +71,7 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
   const config: Partial<Options> = {
     windowMs,
     max,
-    keyGenerator: getClientIp,
+    keyGenerator: (req, res) => ipKeyGenerator(getClientIp(req)),
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {

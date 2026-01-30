@@ -60,6 +60,7 @@ const options: swaggerJsdoc.Options = {
             status: {
               type: 'string',
               example: 'ok',
+              description: 'ok when server, DB and Redis are healthy; degraded otherwise',
             },
             uptime: {
               type: 'number',
@@ -69,6 +70,16 @@ const options: swaggerJsdoc.Options = {
             environment: {
               type: 'string',
               example: 'development',
+            },
+            database: {
+              type: 'string',
+              enum: ['ok', 'error'],
+              description: 'Database connectivity status',
+            },
+            redis: {
+              type: 'string',
+              enum: ['ok', 'error'],
+              description: 'Redis connectivity status',
             },
           },
         },

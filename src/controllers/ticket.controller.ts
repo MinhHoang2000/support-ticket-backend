@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { CreateTicketDto } from '../dtos/ticket.dto';
 import { ticketService } from '../services/ticket.service';
+import { ticketQueue } from '../lib/queue';
 
 export class TicketController {
   /**
@@ -11,6 +12,8 @@ export class TicketController {
     const body: CreateTicketDto = req.body;
 
     const ticket = await ticketService.create(body);
+
+    await ticketQueue.add('ticket-created', { ticketId: ticket.id });
 
     res.success(ticket, 'Ticket created successfully', 201);
   }

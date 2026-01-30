@@ -23,6 +23,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "bullmq": "^5.67.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cors": "^2.8.6",
@@ -30,6 +31,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
+    "ioredis": "^5.9.2",
     "morgan": "^1.10.1",
     "pg": "^8.17.2",
     "prisma": "^7.3.0",

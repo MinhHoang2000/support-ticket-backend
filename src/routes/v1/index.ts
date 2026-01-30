@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
 import ticketsRouter from './tickets';
+import { checkDatabase, checkRedis } from '../../lib/healthCheck';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.use('/tickets', ticketsRouter);
  *   get:
  *     summary: Health check endpoint (v1)
  *     tags: [Health]
- *     description: Returns the health status of the server
+ *     description: Returns the health status of the server, database and Redis
  *     responses:
  *       200:
  *         description: Server is healthy
@@ -29,6 +30,8 @@ router.use('/tickets', ticketsRouter);
  *                     message:
  *                       type: string
  *                       example: Server is healthy
+ *       503:
+ *         description: Service unavailable (DB or Redis down)
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
@@ -36,14 +39,20 @@ router.get(
   '/health',
   asyncHandler(async (req, res) => {
     const NODE_ENV = process.env.NODE_ENV || 'development';
-    res.success(
+    const dbOk = await checkDatabase().then(() => true).catch(() => false);
+    const redisOk = await checkRedis().then(() => true).catch(() => false);
+    const healthy = dbOk && redisOk;
+
+    res.status(healthy ? 200 : 503).success(
       {
-        status: 'ok',
+        status: healthy ? 'ok' : 'degraded',
         uptime: process.uptime(),
         environment: NODE_ENV,
         version: 'v1',
+        database: dbOk ? 'ok' : 'error',
+        redis: redisOk ? 'ok' : 'error',
       },
-      'Server is healthy'
+      healthy ? 'Server is healthy' : 'Database or Redis unavailable'
     );
   })
 );
