@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
+import ticketsRouter from './tickets';
 
 const router = Router();
+
+// Mount tickets routes
+router.use('/tickets', ticketsRouter);
 
 /**
  * @swagger
