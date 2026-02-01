@@ -13,12 +13,21 @@ import {
  *       type: string
  *       enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED]
  *       description: The status of the ticket
+ *     ReplyMadeBy:
+ *       type: string
+ *       enum: [AI, HUMAN_AI]
+ *       description: AI = only AI message reply, no edit. HUMAN_AI = someone edited the AI response.
  */
 export enum TicketStatus {
   OPEN = 'OPEN',
   IN_PROGRESS = 'IN_PROGRESS',
   RESOLVED = 'RESOLVED',
   CLOSED = 'CLOSED',
+}
+
+export enum ReplyMadeBy {
+  AI = 'AI',
+  HUMAN_AI = 'HUMAN_AI',
 }
 
 /**
@@ -56,10 +65,24 @@ export class CreateTicketDto {
   content!: string;
 }
 
+/** DTO for PATCH /tickets/:id/draft - update only ai_reply_message */
+export class UpdateAiReplyDto {
+  @IsString()
+  aiReplyMessage!: string;
+}
+
 /**
  * @swagger
  * components:
  *   schemas:
+ *     UpdateAiReplyDto:
+ *       type: object
+ *       required:
+ *         - aiReplyMessage
+ *       properties:
+ *         aiReplyMessage:
+ *           type: string
+ *           description: New value for ai_reply_message (worker process AI draft)
  *     Ticket:
  *       type: object
  *       properties:
@@ -96,6 +119,12 @@ export class CreateTicketDto {
  *           nullable: true
  *           description: Optional urgency level
  *           example: "high"
+ *         responseDraft:
+ *           type: string
+ *           nullable: true
+ *           description: AI-generated response draft (detail view only)
+ *         replyMadeBy:
+ *           $ref: '#/components/schemas/ReplyMadeBy'
  *         createdAt:
  *           type: string
  *           format: date-time

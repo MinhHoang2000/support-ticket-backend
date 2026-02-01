@@ -24,6 +24,12 @@ enum WorkerProcessStatus {
   INVALID_RESPONSE
 }
 
+/** AI = only AI message reply, no edit. HUMAN_AI = someone edited the AI response. */
+enum ReplyMadeBy {
+  AI
+  HUMAN_AI
+}
+
 model Ticket {
   id             Int      @id @default(autoincrement())
   title          String
@@ -36,8 +42,15 @@ model Ticket {
   sentiment      Int?
   urgency        String?
   responseDraft  String?  @db.Text @map("response_draft")
+  replyMadeBy    ReplyMadeBy? @map("reply_made_by")
   workerProcesses WorkerProcess[]
 
+  @@index([createdAt])
+  @@index([title])
+  @@index([status])
+  @@index([category])
+  @@index([sentiment])
+  @@index([urgency])
   @@map("tickets")
 }
 
