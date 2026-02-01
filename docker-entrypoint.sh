@@ -14,4 +14,9 @@ while ! npx prisma migrate deploy; do
 done
 
 echo "Migrations applied. Starting server..."
-exec node dist/server.js
+while true; do
+  node dist/server.js
+  code=$?
+  echo "Server exited (code ${code}). Restarting in 5s..."
+  sleep 5
+done

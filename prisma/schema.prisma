@@ -17,17 +17,39 @@ enum TicketStatus {
   CLOSED
 }
 
+enum WorkerProcessStatus {
+  INFO
+  ERROR
+  FAILED
+}
+
 model Ticket {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  status    TicketStatus
-  category  String?
-  tag       String?
-  sentiment Int?
-  urgency   String?
+  id             Int      @id @default(autoincrement())
+  title          String
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  status         TicketStatus
+  category       String?
+  tag            String?
+  sentiment      Int?
+  urgency        String?
+  responseDraft  String?  @db.Text @map("response_draft")
+  workerProcesses WorkerProcess[]
 
   @@map("tickets")
+}
+
+model WorkerProcess {
+  id          Int                 @id @default(autoincrement())
+  workerId    String              @map("worker_id")
+  ticketId    Int                 @map("ticket_id")
+  ticket      Ticket              @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  time        DateTime            @default(now())
+  aiResponse  String?             @db.Text @map("ai_response")
+  status      WorkerProcessStatus
+  errorMessage String?            @db.Text @map("error_message")
+  createdAt   DateTime            @default(now())
+
+  @@map("worker_processes")
 }

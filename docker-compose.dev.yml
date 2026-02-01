@@ -42,6 +42,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     container_name: tickets_backend_dev
+    env_file: .env
     environment:
       PORT: ${PORT:-3000}
       NODE_ENV: development
@@ -62,6 +63,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
     volumes:
       # Mount source so edits on host trigger nodemon restart in container

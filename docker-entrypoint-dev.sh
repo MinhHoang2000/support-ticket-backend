@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "Generating Prisma client..."
+npx prisma generate
+
 echo "Waiting for database..."
 retries=10
 while ! npx prisma migrate deploy; do
@@ -14,4 +17,8 @@ while ! npx prisma migrate deploy; do
 done
 
 echo "Migrations applied. Starting dev server (nodemon)..."
-exec "$@"
+while true; do
+  "$@" || true
+  echo "Process exited. Restarting in 5s..."
+  sleep 5
+done
