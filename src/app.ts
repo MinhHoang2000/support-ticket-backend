@@ -28,8 +28,9 @@ if (NODE_ENV === 'production') {
   app.use(morgan('dev'));
 }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Limit JSON body size to mitigate DoS (ticket content + AI draft max 50k chars each)
+app.use(express.json({ limit: '200kb' }));
+app.use(express.urlencoded({ extended: true, limit: '200kb' }));
 app.use(responseMiddleware);
 
 // Rate limit by IP: default 100 requests / 60s; use createRateLimiter() for per-route limits
