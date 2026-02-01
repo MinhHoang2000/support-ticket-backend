@@ -10,16 +10,36 @@ const ALLOWED_PAGE_LIMITS = [10, 20, 50, 100] as const;
 const SORT_BY_VALUES: TicketSortBy[] = ['createdAt', 'title'];
 const SORT_ORDER_VALUES: TicketSortOrder[] = ['asc', 'desc'];
 
+const TICKET_STATUS_VALUES: TicketStatus[] = Object.values(TicketStatus) as TicketStatus[];
+
 export class TicketController {
   /**
    * Handle GET /tickets request
    * Returns tickets for list view (same format as DB). Supports filter (status, category, sentiment, urgency) and sort (createdAt, title; asc/desc).
    */
   async list(req: Request, res: Response): Promise<void> {
-    const page = req.query.page != null ? Number(req.query.page) : undefined;
-    const status = req.query.status as TicketStatus | undefined;
-    const category = req.query.category as string | undefined;
-    const urgency = req.query.urgency as string | undefined;
+    let page: number | undefined;
+    if (req.query.page != null) {
+      const parsed = Number(req.query.page);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        res.badRequest('page must be a positive integer', ErrorCodes.VALIDATION_ERROR.code);
+        return;
+      }
+      page = parsed;
+    }
+
+    let status: TicketStatus | undefined;
+    if (req.query.status != null) {
+      const val = String(req.query.status);
+      if (!TICKET_STATUS_VALUES.includes(val as TicketStatus)) {
+        res.badRequest(
+          `status must be one of: ${TICKET_STATUS_VALUES.join(', ')}`,
+          ErrorCodes.VALIDATION_ERROR.code
+        );
+        return;
+      }
+      status = val as TicketStatus;
+    }
 
     let sentiment: number | undefined;
     if (req.query.sentiment != null) {
@@ -70,7 +90,23 @@ export class TicketController {
       sortOrder = val as TicketSortOrder;
     }
 
-    const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+    const category =
+      typeof req.query.category === 'string' && req.query.category.length <= 200
+        ? req.query.category
+        : typeof req.query.category === 'string'
+          ? undefined
+          : (req.query.category as string | undefined);
+    const urgency =
+      typeof req.query.urgency === 'string' && req.query.urgency.length <= 200
+        ? req.query.urgency
+        : typeof req.query.urgency === 'string'
+          ? undefined
+          : (req.query.urgency as string | undefined);
+
+    let search: string | undefined;
+    if (typeof req.query.search === 'string') {
+      search = req.query.search.length <= 500 ? req.query.search : req.query.search.slice(0, 500);
+    }
 
     const result = await ticketService.list({
       page,
