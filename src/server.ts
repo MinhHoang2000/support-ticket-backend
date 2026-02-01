@@ -1,7 +1,8 @@
 import app from './app';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
-import { closeQueue } from './lib/queue';
+import { closeQueues } from './lib/queue';
+import { closeTicketWorker } from './lib/ticket.queue';
 import { checkHealthOnStartup } from './lib/healthCheck';
 
 const PORT = process.env.PORT || 3000;
@@ -19,7 +20,8 @@ async function startServer(): Promise<void> {
 
     server.close(async () => {
       try {
-        await closeQueue();
+        await closeTicketWorker();
+        await closeQueues();
         await prisma.$disconnect();
         await redis.quit();
         console.log('HTTP server closed. Database, Redis and queue disconnected.');

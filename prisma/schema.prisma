@@ -21,6 +21,7 @@ enum WorkerProcessStatus {
   INFO
   ERROR
   FAILED
+  INVALID_RESPONSE
 }
 
 model Ticket {
@@ -41,15 +42,16 @@ model Ticket {
 }
 
 model WorkerProcess {
-  id          Int                 @id @default(autoincrement())
-  workerId    String              @map("worker_id")
-  ticketId    Int                 @map("ticket_id")
-  ticket      Ticket              @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  time        DateTime            @default(now())
-  aiResponse  String?             @db.Text @map("ai_response")
-  status      WorkerProcessStatus
-  errorMessage String?            @db.Text @map("error_message")
-  createdAt   DateTime            @default(now())
+  id              Int                 @id @default(autoincrement())
+  workerId        String              @map("worker_id")
+  ticketId        Int                 @map("ticket_id")
+  ticket          Ticket              @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  time            DateTime            @default(now())
+  aiReplyMessage  String?             @db.Text @map("ai_reply_message")
+  rawAiResponse   String?             @db.Text @map("raw_ai_response")
+  status          WorkerProcessStatus
+  errorMessage    String?             @db.Text @map("error_message")
+  createdAt       DateTime            @default(now())
 
   @@map("worker_processes")
 }

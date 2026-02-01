@@ -28,6 +28,12 @@ export interface TriageResult {
   response_draft: string;
 }
 
+export interface TriageOutput {
+  raw: string;
+  result: TriageResult | null;
+  valid: boolean;
+}
+
 const TRIAGE_SYSTEM_PROMPT = `You are an AI customer support triage engine operating inside a backend background worker. Your task is to analyze a user support ticket and return a structured triage result suitable for direct database storage and downstream automation. You will receive the following input: ticket_id (string), title (string, the ticket subject/summary), content (string, the full message body/details), and an optional user_context (string, which may be empty). Use both title and content when categorizing, scoring sentiment, and assessing urgency—the title gives a quick summary while the content provides full context. First, categorize the issue into exactly one of the following categories: Billing, Technical, or Feature Request. Second, analyze the sentiment of the ticket (title + content) and return an integer sentiment_score from 1 (very negative) to 10 (very positive). Third, determine the urgency level as one of the following values only: High (service down, payment blocked, or severe frustration), Medium (a workaround exists or the issue is non-critical), or Low (suggestions or nice-to-have feature requests). Fourth, draft a polite, empathetic, and context-aware response that is ready to send to the customer. The response must not mention internal systems, internal processes, or AI, and must not make promises unless you are certain. You must return ONLY valid JSON and nothing else—no markdown, no explanations, no comments. The output must match this exact JSON schema: { "ticket_id": "string", "category": "Billing | Technical | Feature Request", "sentiment_score": 1, "urgency": "High | Medium | Low", "response_draft": "string" }. The sentiment_score must be an integer between 1 and 10. The category and urgency values must match the allowed values exactly. Do not add extra fields, do not return arrays, and do not return null values. If you violate any of these constraints, the output is considered invalid.`;
 
 export interface ChatInput {
@@ -94,8 +100,9 @@ export class AIService {
   /**
    * Analyze a support ticket and return structured triage result for database storage.
    * Uses low temperature for deterministic structured output.
+   * Returns raw AI response and validation status. Use `valid` to decide whether to apply triage.
    */
-  async triage(input: TriageInput): Promise<TriageResult> {
+  async triage(input: TriageInput): Promise<TriageOutput> {
     const model = createChatModel({ temperature: 0.2, maxTokens: 1024 });
 
     const userContent =
@@ -111,9 +118,17 @@ export class AIService {
     const response = await model.invoke(messages);
     const raw = typeof response.content === 'string' ? response.content : String(response.content);
 
-    const parsed = this.parseTriageResponse(raw, input.ticket_id);
-    this.validateTriageResult(parsed);
-    return parsed;
+    let result: TriageResult | null = null;
+    try {
+      const parsed = this.parseTriageResponse(raw, input.ticket_id);
+      this.validateTriageResult(parsed);
+      result = parsed;
+    } catch {
+      return { raw, result: null, valid: false };
+    }
+
+    const valid = result.response_draft.trim().length > 0;
+    return { raw, result, valid };
   }
 
   private parseTriageResponse(raw: string, fallbackTicketId: string): TriageResult {
@@ -158,35 +173,6 @@ export class AIService {
       result.sentiment_score = 5;
     }
     if (!TRIAGE_URGENCIES.includes(result.urgency)) result.urgency = 'Medium';
-  }
-
-  /**
-   * Stream the LLM response token-by-token.
-   * Uses default model unless modelConfig is provided.
-   */
-  async *streamChat(input: ChatInput): AsyncGenerator<string, void, unknown> {
-    const model = input.modelConfig ? createChatModel(input.modelConfig) : getDefaultChatModel();
-
-    const messages: BaseMessage[] = [];
-
-    if (input.history?.length) {
-      for (const turn of input.history) {
-        if (turn.role === 'user') {
-          messages.push(new HumanMessage(turn.content));
-        } else {
-          messages.push(new AIMessage(turn.content));
-        }
-      }
-    }
-
-    messages.push(new HumanMessage(input.message));
-
-    const stream = await model.stream(messages);
-
-    for await (const chunk of stream) {
-      const text = typeof chunk.content === 'string' ? chunk.content : String(chunk.content);
-      if (text) yield text;
-    }
   }
 }
 
