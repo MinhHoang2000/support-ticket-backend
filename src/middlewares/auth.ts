@@ -61,3 +61,23 @@ export function requireAdmin(
   }
   next();
 }
+
+/**
+ * Require req.user to have admin or agent role. Must be used after requireAuth.
+ * Use for endpoints that allow both admins and agents (e.g. list all tickets).
+ * Returns 403 if user has neither role.
+ */
+export function requireAdminOrAgent(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const authReq = req as AuthenticatedRequest;
+  const roles = authReq.user?.roles ?? [];
+  const allowed = Array.isArray(roles) && (roles.includes('admin') || roles.includes('agent'));
+  if (!allowed) {
+    ResponseHelper.forbidden(res, ErrorCodes.FORBIDDEN.message, ErrorCodes.FORBIDDEN.code);
+    return;
+  }
+  next();
+}

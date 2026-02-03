@@ -15,7 +15,7 @@ const TICKET_STATUS_VALUES: TicketStatus[] = Object.values(TicketStatus) as Tick
 
 export class TicketController {
   /**
-   * Handle GET /tickets request (admin only).
+   * Handle GET /tickets request (admin or agent only).
    * Returns all tickets for list view (same format as DB). Supports filter (status, category, sentiment, urgency) and sort (createdAt, title; asc/desc).
    */
   async list(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -263,12 +263,12 @@ export class TicketController {
       return;
     }
     const body = req.body as UpdateAiReplyDto;
-    const updated = await ticketService.updateAiReplyMessage(id, body.aiReplyMessage);
+    const updated = await ticketService.updateAiReplyMessage(id, body.draftReplyMessage);
     if (updated == null) {
       res.notFound(ErrorCodes.NOT_FOUND.message, ErrorCodes.NOT_FOUND.code);
       return;
     }
-    res.success(updated, 'AI draft updated successfully');
+    res.success(updated, 'Draft reply message updated successfully');
   }
 
   /**

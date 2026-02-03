@@ -1,5 +1,5 @@
 /** Allowed role values for User.roles */
-export const ROLES = ['user', 'admin'] as const;
+export const ROLES = ['user', 'admin', 'agent'] as const;
 
 export type Role = (typeof ROLES)[number];
 

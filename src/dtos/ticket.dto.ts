@@ -66,11 +66,11 @@ export class CreateTicketDto {
   content!: string;
 }
 
-/** DTO for PATCH /tickets/:id/draft - update only ai_reply_message */
+/** DTO for PATCH /tickets/:id/draft - update only draft_reply_message */
 export class UpdateAiReplyDto {
   @IsString()
-  @MaxLength(50_000, { message: 'AI reply message must not exceed 50,000 characters' })
-  aiReplyMessage!: string;
+  @MaxLength(50_000, { message: 'Draft reply message must not exceed 50,000 characters' })
+  draftReplyMessage!: string;
 }
 
 /**
@@ -125,6 +125,10 @@ export class UpdateAiReplyDto {
  *           type: string
  *           nullable: true
  *           description: AI-generated response draft (detail view only)
+ *         response:
+ *           type: string
+ *           nullable: true
+ *           description: Reply sent to the user
  *         replyMadeBy:
  *           $ref: '#/components/schemas/ReplyMadeBy'
  *         createdAt:

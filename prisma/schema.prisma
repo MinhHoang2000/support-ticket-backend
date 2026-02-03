@@ -43,6 +43,7 @@ model Ticket {
   sentiment      Int?
   urgency        String?
   responseDraft  String?  @db.Text @map("response_draft")
+  response       String?  @db.Text
   replyMadeBy    ReplyMadeBy? @map("reply_made_by")
   user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   workerProcesses WorkerProcess[]

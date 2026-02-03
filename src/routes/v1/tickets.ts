@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
 import { validateDto } from '../../middlewares/validation';
 import { createRateLimiter } from '../../middlewares/rateLimiter';
-import { requireAdmin } from '../../middlewares/auth';
+import { requireAdminOrAgent } from '../../middlewares/auth';
 import { CreateTicketDto, UpdateAiReplyDto } from '../../dtos/ticket.dto';
 import { ticketController } from '../../controllers/ticket.controller';
 
@@ -24,7 +24,7 @@ const router = Router();
  *   get:
  *     summary: List tickets (list view)
  *     tags: [Tickets]
- *     description: Returns tickets in same format as DB (id, title, content, status, category, tag, sentiment, urgency, createdAt, updatedAt). Color-coding by urgency can be done in the frontend.
+ *     description: Returns all tickets (admin or agent only). Same format as DB (id, title, content, status, category, tag, sentiment, urgency, createdAt, updatedAt). Color-coding by urgency can be done in the frontend.
  *     parameters:
  *       - in: query
  *         name: page
@@ -119,7 +119,7 @@ const router = Router();
  */
 router.get(
   '/',
-  requireAdmin,
+  requireAdminOrAgent,
   asyncHandler(ticketController.list.bind(ticketController))
 );
 

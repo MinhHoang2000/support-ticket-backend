@@ -127,7 +127,7 @@ Create-ticket and list endpoints are rate-limited (see below).
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1/tickets` | **Admin only** | List all tickets (paginated, filterable, sortable) |
+| `GET` | `/api/v1/tickets` | **Admin or Agent** | List all tickets (paginated, filterable, sortable) |
 | `GET` | `/api/v1/tickets/mine` | Yes | List current user's tickets (same query params as list) |
 | `GET` | `/api/v1/tickets/:id` | Yes | Get one ticket by ID |
 | `POST` | `/api/v1/tickets` | Yes | Create a ticket (associated with current user) |
@@ -136,9 +136,9 @@ Create-ticket and list endpoints are rate-limited (see below).
 
 **Create ticket rate limit:** 20 requests per minute per IP.
 
-#### GET `/api/v1/tickets` (admin only)
+#### GET `/api/v1/tickets` (admin or agent)
 
-Returns all tickets. Requires user to have **admin** role. Returns **403 Forbidden** if the user is not an admin.
+Returns all tickets. Requires user to have **admin** or **agent** role. Returns **403 Forbidden** if the user has neither role.
 
 **Query parameters**
 
@@ -186,7 +186,7 @@ Returns all tickets. Requires user to have **admin** role. Returns **403 Forbidd
 
 Ticket list items match DB shape; color-coding by urgency can be done in the frontend. The `tag` field may include triage outcome tags set by the worker after AI triage: `AI_TRIAGE_DONE` (no error, result applied), `AI_TRIAGE_NO_RESULT` (no error, invalid/no result), `AI_TRIAGE_ERROR` (triage threw an error). Multiple tags are comma-separated.  
 **400** – Invalid `page`, `limit`, `status`, `sortBy`, `sortOrder`, or `sentiment`.  
-**401** – Missing or invalid token. **403** – User is not admin.
+**401** – Missing or invalid token. **403** – User is not admin or agent.
 
 #### GET `/api/v1/tickets/mine`
 
@@ -200,7 +200,7 @@ Returns tickets belonging to the **authenticated user** (based on the Bearer tok
 
 #### GET `/api/v1/tickets/:id`
 
-**Response (200)** – Single ticket (full detail, same fields as list plus `responseDraft`, `replyMadeBy` as in schema).
+**Response (200)** – Single ticket (full detail, same fields as list plus `responseDraft`, `response`, `replyMadeBy` as in schema).
 
 **400** – Invalid ID. **404** – Ticket not found.
 
@@ -248,6 +248,7 @@ Updates only the AI draft (`ai_reply_message`) for the latest worker process for
 **Ticket object (detail)** – Fields as in list, plus:
 
 - `responseDraft` (string | null) – AI-generated response draft (detail view).
+- `response` (string | null) – Reply sent to the user.
 - `replyMadeBy` (`AI` | `HUMAN_AI` | null).
 
 ---

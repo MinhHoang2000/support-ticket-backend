@@ -1,16 +1,26 @@
-import { prisma } from '../lib/prisma';
-import { CreateTicketDto, TicketStatus } from '../dtos/ticket.dto';
-import { Prisma, Ticket, WorkerProcess } from '@prisma/client';
-import type { TriageResult } from './ai.service';
+import { prisma } from "../lib/prisma";
+import { CreateTicketDto, TicketStatus } from "../dtos/ticket.dto";
+import { Prisma, Ticket, WorkerProcess } from "@prisma/client";
+import type { TriageResult } from "./ai.service";
 
 /** Ticket fields returned by list (same shape as DB, no computed fields) */
 export type TicketListRow = Pick<
   Ticket,
-  'id' | 'title' | 'content' | 'createdAt' | 'updatedAt' | 'status' | 'category' | 'tag' | 'sentiment' | 'urgency' | 'replyMadeBy'
+  | "id"
+  | "title"
+  | "content"
+  | "createdAt"
+  | "updatedAt"
+  | "status"
+  | "category"
+  | "tag"
+  | "sentiment"
+  | "urgency"
+  | "replyMadeBy"
 >;
 
-export type TicketSortBy = 'createdAt' | 'title';
-export type TicketSortOrder = 'asc' | 'desc';
+export type TicketSortBy = "createdAt" | "title";
+export type TicketSortOrder = "asc" | "desc";
 
 export interface ListTicketsOptions {
   page?: number;
@@ -50,6 +60,7 @@ export class TicketService {
         tag: null,
         sentiment: null,
         urgency: null,
+        responseDraft: null,
         replyMadeBy: null,
       },
     });
@@ -67,22 +78,27 @@ export class TicketService {
   private static readonly DEFAULT_LIMIT = 20;
 
   /** Build Prisma where clause from list options. */
-  private buildWhereClause(options: ListTicketsOptions): Prisma.TicketWhereInput {
+  private buildWhereClause(
+    options: ListTicketsOptions,
+  ): Prisma.TicketWhereInput {
     const where: Prisma.TicketWhereInput = {};
     if (options.userId != null) where.userId = options.userId;
     if (options.status != null) where.status = options.status;
-    if (options.category != null && options.category !== '') where.category = options.category;
-    if (options.sentiment != null && Number.isInteger(options.sentiment)) where.sentiment = options.sentiment;
-    if (options.urgency != null && options.urgency !== '') where.urgency = options.urgency;
+    if (options.category != null && options.category !== "")
+      where.category = options.category;
+    if (options.sentiment != null && Number.isInteger(options.sentiment))
+      where.sentiment = options.sentiment;
+    if (options.urgency != null && options.urgency !== "")
+      where.urgency = options.urgency;
     return where;
   }
 
   /** Build Prisma orderBy from sort options. */
   private buildOrderByClause(
-    sortBy: TicketSortBy = 'createdAt',
-    sortOrder: TicketSortOrder = 'desc'
+    sortBy: TicketSortBy = "createdAt",
+    sortOrder: TicketSortOrder = "desc",
   ): Prisma.TicketOrderByWithRelationInput {
-    return sortBy === 'createdAt'
+    return sortBy === "createdAt"
       ? ({ createdAt: sortOrder } as const)
       : ({ title: sortOrder } as const);
   }
@@ -99,7 +115,13 @@ export class TicketService {
 
     const searchTerm = options.search?.trim();
     if (searchTerm) {
-      return this.listWithFullTextSearch({ ...options, page, limit, skip, searchTerm });
+      return this.listWithFullTextSearch({
+        ...options,
+        page,
+        limit,
+        skip,
+        searchTerm,
+      });
     }
 
     const where = this.buildWhereClause(options);
@@ -139,42 +161,52 @@ export class TicketService {
 
   /** Build raw SQL where conditions for FTS list (includes search + filters). */
   private buildWhereSqlConditions(
-    options: ListTicketsOptions & { searchTerm: string }
+    options: ListTicketsOptions & { searchTerm: string },
   ): Prisma.Sql {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`to_tsvector('english', title) @@ plainto_tsquery('english', ${options.searchTerm})`,
     ];
-    if (options.userId != null) conditions.push(Prisma.sql`"user_id" = ${options.userId}`);
-    if (options.status != null) conditions.push(Prisma.sql`status = ${options.status}`);
-    if (options.category != null && options.category !== '')
+    if (options.userId != null)
+      conditions.push(Prisma.sql`"user_id" = ${options.userId}`);
+    if (options.status != null)
+      conditions.push(Prisma.sql`status = ${options.status}`);
+    if (options.category != null && options.category !== "")
       conditions.push(Prisma.sql`category = ${options.category}`);
     if (options.sentiment != null && Number.isInteger(options.sentiment))
       conditions.push(Prisma.sql`sentiment = ${options.sentiment}`);
-    if (options.urgency != null && options.urgency !== '')
+    if (options.urgency != null && options.urgency !== "")
       conditions.push(Prisma.sql`urgency = ${options.urgency}`);
-    return Prisma.join(conditions, ' AND ');
+    return Prisma.join(conditions, " AND ");
   }
 
   /** Build raw SQL order clause (column and direction). */
   private buildOrderByRaw(
-    sortBy: TicketSortBy = 'createdAt',
-    sortOrder: TicketSortOrder = 'desc'
-  ): { orderColumn: string; orderDir: 'ASC' | 'DESC' } {
-    const orderColumn = sortBy === 'createdAt' ? '"createdAt"' : 'title';
-    const orderDir = sortOrder.toUpperCase() as 'ASC' | 'DESC';
+    sortBy: TicketSortBy = "createdAt",
+    sortOrder: TicketSortOrder = "desc",
+  ): { orderColumn: string; orderDir: "ASC" | "DESC" } {
+    const orderColumn = sortBy === "createdAt" ? '"createdAt"' : "title";
+    const orderDir = sortOrder.toUpperCase() as "ASC" | "DESC";
     return { orderColumn, orderDir };
   }
 
   /**
    * List with PostgreSQL full-text search on title. Uses raw SQL for FTS condition.
    */
-  private async listWithFullTextSearch(options: ListTicketsOptions & {
-    page: number;
-    limit: number;
-    skip: number;
-    searchTerm: string;
-  }): Promise<ListTicketsResult> {
-    const { page, limit, skip, sortBy = 'createdAt', sortOrder = 'desc' } = options;
+  private async listWithFullTextSearch(
+    options: ListTicketsOptions & {
+      page: number;
+      limit: number;
+      skip: number;
+      searchTerm: string;
+    },
+  ): Promise<ListTicketsResult> {
+    const {
+      page,
+      limit,
+      skip,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options;
 
     const whereSql = this.buildWhereSqlConditions(options);
     const { orderColumn, orderDir } = this.buildOrderByRaw(sortBy, sortOrder);
@@ -208,24 +240,16 @@ export class TicketService {
    * Update only ai_reply_message for the latest worker process of a ticket.
    * Returns the updated WorkerProcess, or null if ticket not found or has no worker process.
    */
-  async updateAiReplyMessage(ticketId: number, aiReplyMessage: string): Promise<WorkerProcess | null> {
+  async updateAiReplyMessage(
+    ticketId: number,
+    draftReplyMessage: string,
+  ): Promise<Ticket | null> {
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) return null;
 
-    const latest = await prisma.workerProcess.findFirst({
-      where: { ticketId },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (!latest) return null;
-
-    await prisma.ticket.update({
+    return await prisma.ticket.update({
       where: { id: ticketId },
-      data: { replyMadeBy: 'HUMAN_AI' },
-    });
-
-    return prisma.workerProcess.update({
-      where: { id: latest.id },
-      data: { aiReplyMessage },
+      data: { replyMadeBy: "HUMAN_AI", responseDraft: draftReplyMessage },
     });
   }
 
@@ -251,16 +275,16 @@ export class TicketService {
         sentiment: triage.sentiment_score,
         urgency: triage.urgency,
         responseDraft: triage.response_draft,
-        replyMadeBy: 'AI',
+        replyMadeBy: "AI",
       },
     });
   }
 
   /** Triage outcome tags set by the worker after AI triage. */
   static readonly TRIAGE_TAG = {
-    DONE: 'AI_TRIAGE_DONE',
-    NO_RESULT: 'AI_TRIAGE_NO_RESULT',
-    ERROR: 'AI_TRIAGE_ERROR',
+    DONE: "AI_TRIAGE_DONE",
+    NO_RESULT: "AI_TRIAGE_NO_RESULT",
+    ERROR: "AI_TRIAGE_ERROR",
   } as const;
 
   /**
@@ -268,7 +292,10 @@ export class TicketService {
    * Preserves existing tag by appending with a comma.
    */
   async addTriageTag(ticketId: number, triageTag: string): Promise<Ticket> {
-    const row = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { tag: true } });
+    const row = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { tag: true },
+    });
     if (!row) throw new Error(`Ticket not found: ${ticketId}`);
     const newTag = row.tag ? `${row.tag},${triageTag}` : triageTag;
     return prisma.ticket.update({
