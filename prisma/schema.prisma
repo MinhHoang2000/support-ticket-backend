@@ -34,6 +34,7 @@ model Ticket {
   id             Int      @id @default(autoincrement())
   title          String
   content        String   @db.Text
+  userId         Int?     @map("user_id")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   status         TicketStatus
@@ -43,6 +44,7 @@ model Ticket {
   urgency        String?
   responseDraft  String?  @db.Text @map("response_draft")
   replyMadeBy    ReplyMadeBy? @map("reply_made_by")
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   workerProcesses WorkerProcess[]
 
   @@index([createdAt])
@@ -51,6 +53,7 @@ model Ticket {
   @@index([category])
   @@index([sentiment])
   @@index([urgency])
+  @@index([userId])
   @@map("tickets")
 }
 
@@ -78,6 +81,7 @@ model User {
   roles     String[] @default(["user"])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tickets   Ticket[]
 
   @@map("users")
 }

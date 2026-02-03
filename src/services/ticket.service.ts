@@ -15,6 +15,8 @@ export type TicketSortOrder = 'asc' | 'desc';
 export interface ListTicketsOptions {
   page?: number;
   limit?: number;
+  /** When set, only tickets for this user are returned. */
+  userId?: number;
   status?: TicketStatus;
   category?: string;
   sentiment?: number;
@@ -35,13 +37,14 @@ export interface ListTicketsResult {
 
 export class TicketService {
   /**
-   * Create a new ticket in the database
+   * Create a new ticket in the database. Optionally associate with a user (userId).
    */
-  async create(data: CreateTicketDto): Promise<Ticket> {
+  async create(data: CreateTicketDto, userId?: number): Promise<Ticket> {
     return prisma.ticket.create({
       data: {
         title: data.title,
         content: data.content,
+        userId: userId ?? null,
         status: TicketStatus.OPEN,
         category: null,
         tag: null,
@@ -66,6 +69,7 @@ export class TicketService {
   /** Build Prisma where clause from list options. */
   private buildWhereClause(options: ListTicketsOptions): Prisma.TicketWhereInput {
     const where: Prisma.TicketWhereInput = {};
+    if (options.userId != null) where.userId = options.userId;
     if (options.status != null) where.status = options.status;
     if (options.category != null && options.category !== '') where.category = options.category;
     if (options.sentiment != null && Number.isInteger(options.sentiment)) where.sentiment = options.sentiment;
@@ -140,6 +144,7 @@ export class TicketService {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`to_tsvector('english', title) @@ plainto_tsquery('english', ${options.searchTerm})`,
     ];
+    if (options.userId != null) conditions.push(Prisma.sql`"user_id" = ${options.userId}`);
     if (options.status != null) conditions.push(Prisma.sql`status = ${options.status}`);
     if (options.category != null && options.category !== '')
       conditions.push(Prisma.sql`category = ${options.category}`);

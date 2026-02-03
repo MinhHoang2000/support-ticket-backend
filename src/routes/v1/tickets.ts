@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
 import { validateDto } from '../../middlewares/validation';
 import { createRateLimiter } from '../../middlewares/rateLimiter';
+import { requireAdmin } from '../../middlewares/auth';
 import { CreateTicketDto, UpdateAiReplyDto } from '../../dtos/ticket.dto';
 import { ticketController } from '../../controllers/ticket.controller';
 
@@ -118,7 +119,99 @@ const router = Router();
  */
 router.get(
   '/',
+  requireAdmin,
   asyncHandler(ticketController.list.bind(ticketController))
+);
+
+/**
+ * @swagger
+ * /tickets/mine:
+ *   get:
+ *     summary: List current user's tickets
+ *     tags: [Tickets]
+ *     description: Returns tickets belonging to the authenticated user (same query params as list all).
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           enum: [10, 20, 50, 100]
+ *           default: 20
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           $ref: '#/components/schemas/TicketStatus'
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sentiment
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: urgency
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, title]
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User's tickets retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         tickets:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Ticket'
+ *                         total:
+ *                           type: integer
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                     message:
+ *                       type: string
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
+router.get(
+  '/mine',
+  asyncHandler(ticketController.listMine.bind(ticketController))
 );
 
 /**

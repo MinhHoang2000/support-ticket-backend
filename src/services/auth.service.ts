@@ -60,7 +60,11 @@ export class AuthService {
     if (!valid) {
       throw new AuthServiceError('Invalid email or password.', 'INVALID_CREDENTIALS');
     }
-    const token = signToken({ userId: user.id, email: user.email });
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      roles: user.roles ?? ['user'],
+    });
     return { user: this.toSafeUser(user), token };
   }
 

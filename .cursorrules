@@ -1,0 +1,29 @@
+API docs location:
+
+- Default API documentation file is docs/api.md
+- If multiple services exist, use docs/api/<service-name>.md
+
+API documentation rule (MANDATORY):
+
+- Any change to an API (endpoint, method, URL, request body, query params, headers, response shape, status codes, or behavior)
+  MUST be accompanied by an update to the API documentation Markdown file.
+- If an API docs file does not exist, create one (e.g. docs/api.md or API.md).
+- Documentation updates must be done in the same change as the code update.
+
+Documentation requirements:
+
+- Clearly specify:
+  - Endpoint and HTTP method
+  - Request parameters (path, query, body)
+  - Authentication/authorization requirements
+  - Example request and response
+  - Possible error responses
+- Ensure examples match the actual implementation exactly.
+- Never leave documentation outdated or “TODO”.
+
+Enforcement:
+
+- If the user asks to change an API but does not mention documentation,
+  you MUST still update the API docs.
+- If you are unsure whether a change affects the API,
+  assume it does and update the docs.

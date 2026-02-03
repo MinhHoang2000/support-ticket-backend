@@ -18,7 +18,7 @@ function getBearerToken(req: Request): string | null {
 
 /**
  * Require valid JWT and reject blacklisted (logged-out) tokens.
- * Attaches req.user (userId, email).
+ * Attaches req.user (userId, email, roles).
  */
 export async function requireAuth(
   req: Request,
@@ -42,4 +42,22 @@ export async function requireAuth(
   } catch {
     ResponseHelper.unauthorized(res, 'Invalid or expired token', ErrorCodes.UNAUTHORIZED.code);
   }
+}
+
+/**
+ * Require req.user to have admin role. Must be used after requireAuth.
+ * Returns 403 if user is not admin.
+ */
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const authReq = req as AuthenticatedRequest;
+  const roles = authReq.user?.roles ?? [];
+  if (!Array.isArray(roles) || !roles.includes('admin')) {
+    ResponseHelper.forbidden(res, ErrorCodes.FORBIDDEN.message, ErrorCodes.FORBIDDEN.code);
+    return;
+  }
+  next();
 }

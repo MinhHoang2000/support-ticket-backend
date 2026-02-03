@@ -41,6 +41,7 @@ router.use('/auth', authRouter);
  */
 router.get(
   '/health',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const NODE_ENV = process.env.NODE_ENV || 'development';
     const dbOk = await checkDatabase().then(() => true).catch(() => false);
