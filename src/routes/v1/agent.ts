@@ -38,30 +38,36 @@ const router = Router();
  *       - in: query
  *         name: status
  *         schema:
- *           $ref: '#/components/schemas/TicketStatus'
- *         description: Filter by ticket status
+ *           type: string
+ *           enum: [open, in_progress, resolved, closed]
+ *         description: Filter by ticket status (lowercase; values normalized before validation)
  *       - in: query
  *         name: category
  *         schema:
  *           type: string
- *         description: Filter by category
+ *           enum: [billing, technical, "feature request"]
+ *         description: Filter by category (lowercase)
  *       - in: query
  *         name: sentiment
  *         schema:
  *           type: integer
- *         description: Filter by sentiment (integer)
+ *           minimum: 1
+ *           maximum: 10
+ *           description: 1 = very negative, 10 = very positive
+ *         description: Filter by sentiment score (integer 1–10)
  *       - in: query
  *         name: urgency
  *         schema:
  *           type: string
- *         description: Filter by urgency
+ *           enum: [high, medium, low]
+ *         description: Filter by urgency (lowercase)
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [createdAt, title]
- *           default: createdAt
- *         description: Sort field
+ *           enum: [createdat, title]
+ *           default: createdat
+ *         description: Sort field (lowercase; createdat maps to createdAt)
  *       - in: query
  *         name: sortOrder
  *         schema:
@@ -111,7 +117,7 @@ const router = Router();
  */
 router.get(
   '/tickets',
-  asyncHandler((req, res, next) => ticketController.list(req, res, next))
+  asyncHandler(ticketController.list.bind(ticketController))
 );
 
 /**

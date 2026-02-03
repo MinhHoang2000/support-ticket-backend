@@ -148,7 +148,7 @@ Create-ticket and list endpoints are rate-limited (see below).
 
 Returns tickets belonging to the **authenticated user** (based on the Bearer token). Same query parameters and response shape as `GET /api/v1/agent/tickets`. Only tickets created by the current user (or linked to their account) are returned.
 
-**Query parameters:** Same as `GET /api/v1/agent/tickets` (`page`, `limit`, `status`, `category`, `sentiment`, `urgency`, `sortBy`, `sortOrder`, `search`).
+**Query parameters:** Same as `GET /api/v1/agent/tickets` (`page`, `limit`, `status`, `category`, `sentiment`, `urgency`, `sortBy`, `sortOrder`, `search`). All filter/sort enum params are **lowercase**: values are normalized with `.toLowerCase()` and validated against lowercase enums (e.g. `category`: `billing`, `technical`, `feature request`; `sentiment`: integer 1–10).
 
 **Response (200):** Same shape as list: `data`: `{ tickets, total, page, limit, totalPages }`.
 
@@ -172,13 +172,15 @@ Returns all tickets. Requires **admin** or **agent** role. Base path for agent A
 |-------|------|---------|-------------|
 | `page` | integer | 1 | Page number (≥ 1) |
 | `limit` | integer | 20 | Items per page: `10`, `20`, `50`, or `100` |
-| `status` | string | — | Filter: `OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED` |
-| `category` | string | — | Filter by category (max 200 chars) |
-| `sentiment` | integer | — | Filter by sentiment |
-| `urgency` | string | — | Filter by urgency (max 200 chars) |
-| `sortBy` | string | `createdAt` | Sort field: `createdAt`, `title` |
+| `status` | string | — | Filter (lowercase, normalized): `open`, `in_progress`, `resolved`, `closed` |
+| `category` | string | — | Filter by category (lowercase): `billing`, `technical`, `feature request` |
+| `sentiment` | integer | — | Filter by sentiment score. Integer **1** (very negative) to **10** (very positive) |
+| `urgency` | string | — | Filter by urgency (lowercase): `high`, `medium`, `low` |
+| `sortBy` | string | `createdat` | Sort field (lowercase): `createdat`, `title` |
 | `sortOrder` | string | `desc` | `asc` or `desc` |
 | `search` | string | — | Full-text search in title (max 500 chars) |
+
+Filter and sort enum params are **transformed and validated as lowercase**: the API lowercases each value before validation. Use the lowercase values above in query strings.
 
 **Response (200)** – Same shape as list: `data`: `{ tickets, total, page, limit, totalPages }`. Ticket list items match DB shape.
 
@@ -254,6 +256,16 @@ Marks the ticket as `CLOSED`. **Only the user who created the ticket can close i
 
 **Ticket status:** `OPEN` | `IN_PROGRESS` | `RESOLVED` | `CLOSED`  
 Tickets start as `OPEN`, move to `IN_PROGRESS` automatically after AI triage, and can be marked `RESOLVED` via `POST /api/v1/tickets/:id/resolve`. Only the creator can close a ticket via `POST /api/v1/tickets/:id/close`, which sets status to `CLOSED`.
+
+**Category (list filter):** `billing` | `technical` | `feature request` — Use these **lowercase** values for the `category` query parameter on `GET /api/v1/agent/tickets` and `GET /api/v1/tickets/mine`. Values are normalized to lowercase before validation.
+
+**Sentiment (list filter):** integer **1** to **10** — 1 = very negative, 10 = very positive. Use for the `sentiment` query parameter on list endpoints.
+
+**Urgency (list filter):** `high` | `medium` | `low` — Use these **lowercase** values for the `urgency` query parameter on list endpoints. Values are normalized to lowercase before validation.
+
+**Status (list filter):** `open` | `in_progress` | `resolved` | `closed` — Use these **lowercase** values for the `status` query parameter. Values are normalized to lowercase before validation.
+
+**Sort (list):** `sortBy`: `createdat` | `title` (lowercase); `sortOrder`: `asc` | `desc`. `sortBy` is normalized to lowercase before validation.
 
 **Reply origin:** `AI` | `HUMAN_AI` (who last produced the reply: AI only vs human-edited AI)
 
