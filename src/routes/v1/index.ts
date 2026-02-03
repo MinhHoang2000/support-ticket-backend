@@ -1,12 +1,15 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
 import ticketsRouter from './tickets';
+import authRouter from './auth';
 import { checkDatabase, checkRedis } from '../../lib/healthCheck';
 
 const router = Router();
 
 // Mount tickets routes
 router.use('/tickets', ticketsRouter);
+// Mount auth routes
+router.use('/auth', authRouter);
 
 /**
  * @swagger
