@@ -35,8 +35,8 @@ All responses are JSON. Success responses use the shape below unless noted.
 
 ## Authentication
 
-- **All API endpoints** require authentication except signup, login, and logout.
-- Send: `Authorization: Bearer <JWT>` on every request to health and tickets.
+- **All API endpoints** require authentication except signup, login, logout, and health.
+- Send: `Authorization: Bearer <JWT>` on every request to tickets.
 - **Auth routes** (signup, login, logout) do **not** require a token.
 - After login, send the returned `token` in the `Authorization` header for all other requests.
 - Logout: call `POST /auth/logout` (optionally with the current Bearer token). The client should then discard the token.
@@ -49,7 +49,7 @@ All responses are JSON. Success responses use the shape below unless noted.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1/health` | **Yes** (Bearer) | Server, DB, and Redis status |
+| `GET` | `/api/v1/health` | No | Server, DB, and Redis status |
 
 **Response (200 OK or 503 Service Unavailable)**
 
@@ -184,7 +184,7 @@ Returns all tickets. Requires user to have **admin** role. Returns **403 Forbidd
 }
 ```
 
-Ticket list items match DB shape; color-coding by urgency can be done on the frontend.  
+Ticket list items match DB shape; color-coding by urgency can be done in the frontend. The `tag` field may include triage outcome tags set by the worker after AI triage: `AI_TRIAGE_DONE` (no error, result applied), `AI_TRIAGE_NO_RESULT` (no error, invalid/no result), `AI_TRIAGE_ERROR` (triage threw an error). Multiple tags are comma-separated.  
 **400** – Invalid `page`, `limit`, `status`, `sortBy`, `sortOrder`, or `sentiment`.  
 **401** – Missing or invalid token. **403** – User is not admin.
 
@@ -262,7 +262,7 @@ Updates only the AI draft (`ai_reply_message`) for the latest worker process for
 ## Quick checklist for frontend
 
 1. **Base URL:** `/api/v1` (or full origin, e.g. `https://api.example.com/api/v1`).
-2. **Auth:** All endpoints except signup/login/logout require `Authorization: Bearer <token>` (including `/api/v1/health` and all `/api/v1/tickets` endpoints). Use `GET /api/v1/tickets/mine` for the current user's tickets; use `GET /api/v1/tickets` only for admin users (403 if not admin).
+2. **Auth:** All endpoints except signup/login/logout/health require `Authorization: Bearer <token>` (all `/api/v1/tickets` endpoints). Use `GET /api/v1/tickets/mine` for the current user's tickets; use `GET /api/v1/tickets` only for admin users (403 if not admin).
 3. **Errors:** Check `success === false`, use `message` and `errorCode` for UX; use HTTP status for retries/redirects (e.g. 401 → re-login).
 4. **Pagination:** `GET /tickets` returns `tickets`, `total`, `page`, `limit`, `totalPages`.
 5. **Validation:** Use the same constraints (lengths, enums) as in this doc to avoid 400s.

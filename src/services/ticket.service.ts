@@ -255,6 +255,27 @@ export class TicketService {
       },
     });
   }
+
+  /** Triage outcome tags set by the worker after AI triage. */
+  static readonly TRIAGE_TAG = {
+    DONE: 'AI_TRIAGE_DONE',
+    NO_RESULT: 'AI_TRIAGE_NO_RESULT',
+    ERROR: 'AI_TRIAGE_ERROR',
+  } as const;
+
+  /**
+   * Append a triage outcome tag to the ticket (e.g. AI_TRIAGE_DONE, AI_TRIAGE_NO_RESULT, AI_TRIAGE_ERROR).
+   * Preserves existing tag by appending with a comma.
+   */
+  async addTriageTag(ticketId: number, triageTag: string): Promise<Ticket> {
+    const row = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { tag: true } });
+    if (!row) throw new Error(`Ticket not found: ${ticketId}`);
+    const newTag = row.tag ? `${row.tag},${triageTag}` : triageTag;
+    return prisma.ticket.update({
+      where: { id: ticketId },
+      data: { tag: newTag },
+    });
+  }
 }
 
 export const ticketService = new TicketService();

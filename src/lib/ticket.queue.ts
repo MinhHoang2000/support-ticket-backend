@@ -2,7 +2,7 @@ import { Worker } from 'bullmq';
 import { redis } from './redis';
 import { TICKET_QUEUE_NAME } from './queue';
 import { aiService } from '../services/ai.service';
-import { ticketService } from '../services/ticket.service';
+import { ticketService, TicketService } from '../services/ticket.service';
 
 /** Worker concurrency for ticket queue */
 const TICKET_WORKER_CONCURRENCY = 4;
@@ -67,6 +67,7 @@ export const ticketWorker = new Worker(
       });
 
       if (!triageOutput.valid || !triageOutput.result) {
+        await ticketService.addTriageTag(ticketId, TicketService.TRIAGE_TAG.NO_RESULT);
         await logWorkerProcess({
           workerId,
           ticketId,
@@ -78,6 +79,7 @@ export const ticketWorker = new Worker(
       }
 
       await ticketService.updateTriage(ticketId, triageOutput.result);
+      await ticketService.addTriageTag(ticketId, TicketService.TRIAGE_TAG.DONE);
       await logWorkerProcess({
         workerId,
         ticketId,
@@ -87,6 +89,7 @@ export const ticketWorker = new Worker(
       });
       console.log('Ticket triage completed:', ticketId, triageOutput.result.category, triageOutput.result.urgency);
     } catch (err) {
+      await ticketService.addTriageTag(ticketId, TicketService.TRIAGE_TAG.ERROR);
       const message = err instanceof Error ? err.message : String(err);
       await logWorkerProcess({
         workerId,
