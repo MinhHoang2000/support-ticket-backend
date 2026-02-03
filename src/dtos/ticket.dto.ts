@@ -80,11 +80,11 @@ export class UpdateAiReplyDto {
  *     UpdateAiReplyDto:
  *       type: object
  *       required:
- *         - aiReplyMessage
+ *         - draftReplyMessage
  *       properties:
- *         aiReplyMessage:
+ *         draftReplyMessage:
  *           type: string
- *           description: New value for ai_reply_message (worker process AI draft)
+ *           description: New value for the ticket's AI response draft
  *     Ticket:
  *       type: object
  *       properties:

@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth';
+import type { TicketCreatorRequest } from '../middlewares/ticketCreator';
 import { CreateTicketDto, TicketStatus, UpdateAiReplyDto } from '../dtos/ticket.dto';
 import { ticketService, TicketSortBy, TicketSortOrder } from '../services/ticket.service';
 import { ticketQueue } from '../lib/queue';
@@ -235,10 +236,43 @@ export class TicketController {
   }
 
   /**
-   * Handle GET /tickets/:id request
-   * Returns a single ticket by ID (full detail, same format as DB).
+   * Handle GET /tickets/:id request (user/creator only).
+   * Returns only id, title, content, createdAt, updatedAt, status; includes response only when status is RESOLVED or CLOSED.
+   * Uses req.ticket from requireTicketCreator middleware.
    */
-  async getById(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getById(req: TicketCreatorRequest, res: Response): Promise<void> {
+    const ticket = req.ticket;
+    const status = ticket.status as TicketStatus;
+    const isResolvedOrClosed = status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED;
+
+    const payload: {
+      id: number;
+      title: string;
+      content: string;
+      createdAt: Date;
+      updatedAt: Date;
+      status: string;
+      response?: string;
+    } = {
+      id: ticket.id,
+      title: ticket.title,
+      content: ticket.content,
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.updatedAt,
+      status: ticket.status,
+    };
+    if (isResolvedOrClosed && ticket.response != null) {
+      payload.response = ticket.response;
+    }
+
+    res.success(payload, 'Ticket retrieved successfully');
+  }
+
+  /**
+   * Handle GET /tickets/:id/detail request (admin or agent only).
+   * Returns full ticket (all fields). Uses ticket ID from params.
+   */
+  async getByIdForAdminOrAgent(req: AuthenticatedRequest, res: Response): Promise<void> {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) {
       res.badRequest('Invalid ticket ID', ErrorCodes.BAD_REQUEST.code);
@@ -254,12 +288,25 @@ export class TicketController {
 
   /**
    * Handle PATCH /tickets/:id/draft request
-   * Updates only ai_reply_message on the latest worker process for the ticket.
+   * Updates only the ticket responseDraft (AI response draft).
    */
   async updateDraft(req: AuthenticatedRequest, res: Response): Promise<void> {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) {
       res.badRequest('Invalid ticket ID', ErrorCodes.BAD_REQUEST.code);
+      return;
+    }
+    const ticket = await ticketService.getById(id);
+    if (ticket == null) {
+      res.notFound(ErrorCodes.NOT_FOUND.message, ErrorCodes.NOT_FOUND.code);
+      return;
+    }
+    const ticketStatus = ticket.status as TicketStatus;
+    if (![TicketStatus.OPEN, TicketStatus.IN_PROGRESS].includes(ticketStatus)) {
+      res.badRequest(
+        'Draft replies can only be edited when the ticket is OPEN or IN_PROGRESS.',
+        ErrorCodes.BAD_REQUEST.code
+      );
       return;
     }
     const body = req.body as UpdateAiReplyDto;
@@ -272,16 +319,83 @@ export class TicketController {
   }
 
   /**
-   * Handle DELETE /tickets/:id request
-   * Deletes a ticket by ID (cascade deletes related worker processes).
+   * Handle POST /tickets/:id/close request
+   * Marks the ticket CLOSED. Only the user who created the ticket can close it.
    */
-  async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async close(req: AuthenticatedRequest, res: Response): Promise<void> {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) {
       res.badRequest('Invalid ticket ID', ErrorCodes.BAD_REQUEST.code);
       return;
     }
-    const deleted = await ticketService.delete(id);
+    const ticket = await ticketService.getById(id);
+    if (ticket == null) {
+      res.notFound(ErrorCodes.NOT_FOUND.message, ErrorCodes.NOT_FOUND.code);
+      return;
+    }
+    if (ticket.userId == null) {
+      res.forbidden('Only the user who created the ticket can close it.', ErrorCodes.FORBIDDEN.code);
+      return;
+    }
+    if (ticket.userId !== req.user!.userId) {
+      res.forbidden('Only the user who created the ticket can close it.', ErrorCodes.FORBIDDEN.code);
+      return;
+    }
+    const ticketStatus = ticket.status as TicketStatus;
+    if (ticketStatus === TicketStatus.CLOSED) {
+      res.badRequest('Ticket is already closed.', ErrorCodes.BAD_REQUEST.code);
+      return;
+    }
+    const closed = await ticketService.closeTicket(id);
+    if (closed == null) {
+      res.notFound(ErrorCodes.NOT_FOUND.message, ErrorCodes.NOT_FOUND.code);
+      return;
+    }
+    res.success(closed, 'Ticket closed successfully');
+  }
+
+  /**
+   * Handle POST /tickets/:id/resolve request
+   * Copies the current responseDraft into response and marks the ticket RESOLVED.
+   */
+  async resolve(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) {
+      res.badRequest('Invalid ticket ID', ErrorCodes.BAD_REQUEST.code);
+      return;
+    }
+
+    const ticket = await ticketService.getById(id);
+    if (ticket == null) {
+      res.notFound(ErrorCodes.NOT_FOUND.message, ErrorCodes.NOT_FOUND.code);
+      return;
+    }
+    const ticketStatus = ticket.status as TicketStatus;
+    if (ticketStatus !== TicketStatus.IN_PROGRESS && ticketStatus !== TicketStatus.OPEN) {
+      res.badRequest('Only IN_PROGRESS or OPEN tickets can be resolved.', ErrorCodes.BAD_REQUEST.code);
+      return;
+    }
+    if (ticket.responseDraft == null) {
+      res.badRequest('Cannot resolve a ticket without a response draft.', ErrorCodes.BAD_REQUEST.code);
+      return;
+    }
+
+    const draft = ticket.responseDraft.trim();
+    if (draft.length === 0) {
+      res.badRequest('Cannot resolve a ticket without a response draft.', ErrorCodes.BAD_REQUEST.code);
+      return;
+    }
+
+    const resolved = await ticketService.resolveTicket(id, ticket.responseDraft);
+    res.success(resolved, 'Ticket resolved successfully');
+  }
+
+  /**
+   * Handle DELETE /tickets/:id request.
+   * Only the creator can delete. Uses req.ticket from requireTicketCreator middleware.
+   */
+  async delete(req: TicketCreatorRequest, res: Response): Promise<void> {
+    const deleted = await ticketService.delete(req.ticket.id);
     if (deleted == null) {
       res.notFound(ErrorCodes.NOT_FOUND.message, ErrorCodes.NOT_FOUND.code);
       return;

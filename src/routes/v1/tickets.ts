@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
 import { validateDto } from '../../middlewares/validation';
 import { createRateLimiter } from '../../middlewares/rateLimiter';
-import { requireAdminOrAgent } from '../../middlewares/auth';
-import { CreateTicketDto, UpdateAiReplyDto } from '../../dtos/ticket.dto';
+import { requireTicketCreator } from '../../middlewares/ticketCreator';
+import { CreateTicketDto } from '../../dtos/ticket.dto';
 import { ticketController } from '../../controllers/ticket.controller';
 
 // Stricter limit for ticket creation: 20 requests per minute per IP
@@ -17,111 +17,6 @@ const router = Router();
  *   name: Tickets
  *   description: Ticket management endpoints
  */
-
-/**
- * @swagger
- * /tickets:
- *   get:
- *     summary: List tickets (list view)
- *     tags: [Tickets]
- *     description: Returns all tickets (admin or agent only). Same format as DB (id, title, content, status, category, tag, sentiment, urgency, createdAt, updatedAt). Color-coding by urgency can be done in the frontend.
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number (1-based)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           enum: [10, 20, 50, 100]
- *           default: 20
- *         description: Items per page (only 10, 20, 50, or 100 allowed)
- *       - in: query
- *         name: status
- *         schema:
- *           $ref: '#/components/schemas/TicketStatus'
- *         description: Filter by ticket status
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *         description: Filter by category
- *       - in: query
- *         name: sentiment
- *         schema:
- *           type: integer
- *         description: Filter by sentiment (integer)
- *       - in: query
- *         name: urgency
- *         schema:
- *           type: string
- *         description: Filter by urgency
- *       - in: query
- *         name: sortBy
- *         schema:
- *           type: string
- *           enum: [createdAt, title]
- *           default: createdAt
- *         description: Sort field
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *           default: desc
- *         description: Sort direction
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Full-text search in title (PostgreSQL FTS; tokenized/stemmed)
- *     responses:
- *       200:
- *         description: Tickets retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/ApiResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         tickets:
- *                           type: array
- *                           items:
- *                             $ref: '#/components/schemas/Ticket'
- *                         total:
- *                           type: integer
- *                           description: Total number of tickets
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         totalPages:
- *                           type: integer
- *                     message:
- *                       type: string
- *                       example: Tickets retrieved successfully
- *       400:
- *         description: Validation error (e.g. invalid limit, sortBy, sortOrder, or sentiment)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       500:
- *         $ref: '#/components/responses/InternalServerError'
- */
-router.get(
-  '/',
-  requireAdminOrAgent,
-  asyncHandler(ticketController.list.bind(ticketController))
-);
 
 /**
  * @swagger
@@ -218,9 +113,11 @@ router.get(
  * @swagger
  * /tickets/{id}:
  *   get:
- *     summary: Get ticket by ID (detail view)
+ *     summary: Get ticket by ID (user/creator, limited fields)
  *     tags: [Tickets]
- *     description: Returns a single ticket with all fields (same format as DB).
+ *     description: |
+ *       Only the creator of the ticket can access. Returns id, title, content, createdAt, updatedAt, status.
+ *       The response field is included only when status is RESOLVED or CLOSED.
  *     parameters:
  *       - in: path
  *         name: id
@@ -231,7 +128,7 @@ router.get(
  *         description: Ticket ID
  *     responses:
  *       200:
- *         description: Ticket retrieved successfully
+ *         description: Ticket retrieved successfully (limited fields; response only if RESOLVED/CLOSED)
  *         content:
  *           application/json:
  *             schema:
@@ -240,12 +137,26 @@ router.get(
  *                 - type: object
  *                   properties:
  *                     data:
- *                       $ref: '#/components/schemas/Ticket'
+ *                       type: object
+ *                       properties:
+ *                         id: { type: integer }
+ *                         title: { type: string }
+ *                         content: { type: string }
+ *                         createdAt: { type: string, format: date-time }
+ *                         updatedAt: { type: string, format: date-time }
+ *                         status: { $ref: '#/components/schemas/TicketStatus' }
+ *                         response: { type: string, nullable: true, description: Present only when status is RESOLVED or CLOSED }
  *                     message:
  *                       type: string
  *                       example: Ticket retrieved successfully
  *       400:
  *         description: Invalid ticket ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Not the creator of this ticket
  *         content:
  *           application/json:
  *             schema:
@@ -261,7 +172,8 @@ router.get(
  */
 router.get(
   '/:id',
-  asyncHandler(ticketController.getById.bind(ticketController))
+  asyncHandler(requireTicketCreator),
+  asyncHandler(ticketController.getById.bind(ticketController) as (req: import('express').Request, res: import('express').Response) => Promise<void>)
 );
 
 /**
@@ -270,7 +182,7 @@ router.get(
  *   delete:
  *     summary: Delete a ticket
  *     tags: [Tickets]
- *     description: Deletes a ticket by ID. Related worker processes are cascade-deleted.
+ *     description: Only the creator of the ticket can delete it. Deletes the ticket by ID; related worker processes are cascade-deleted.
  *     parameters:
  *       - in: path
  *         name: id
@@ -304,6 +216,12 @@ router.get(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Not the creator of this ticket
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Ticket not found
  *         content:
@@ -315,16 +233,17 @@ router.get(
  */
 router.delete(
   '/:id',
-  asyncHandler(ticketController.delete.bind(ticketController))
+  asyncHandler(requireTicketCreator),
+  asyncHandler(ticketController.delete.bind(ticketController) as (req: import('express').Request, res: import('express').Response) => Promise<void>)
 );
 
 /**
  * @swagger
- * /tickets/{id}/draft:
- *   patch:
- *     summary: Edit AI draft response (ai_reply_message only)
+ * /tickets/{id}/close:
+ *   post:
+ *     summary: Close a ticket
  *     tags: [Tickets]
- *     description: Updates only the ai_reply_message field on the latest worker process for this ticket.
+ *     description: Marks the ticket as CLOSED. Only the user who created the ticket can close it.
  *     parameters:
  *       - in: path
  *         name: id
@@ -333,15 +252,9 @@ router.delete(
  *           type: integer
  *           minimum: 1
  *         description: Ticket ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/UpdateAiReplyDto'
  *     responses:
  *       200:
- *         description: AI draft updated successfully
+ *         description: Ticket closed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -350,19 +263,24 @@ router.delete(
  *                 - type: object
  *                   properties:
  *                     data:
- *                       type: object
- *                       description: Updated worker process (includes id, ticketId, aiReplyMessage, etc.)
+ *                       $ref: '#/components/schemas/Ticket'
  *                     message:
  *                       type: string
- *                       example: AI draft updated successfully
+ *                       example: Ticket closed successfully
  *       400:
- *         description: Invalid ticket ID or validation error
+ *         description: Invalid ticket ID or ticket already closed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Only the user who created the ticket can close it
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Ticket or worker process not found
+ *         description: Ticket not found
  *         content:
  *           application/json:
  *             schema:
@@ -370,10 +288,9 @@ router.delete(
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.patch(
-  '/:id/draft',
-  validateDto(UpdateAiReplyDto),
-  asyncHandler(ticketController.updateDraft.bind(ticketController))
+router.post(
+  '/:id/close',
+  asyncHandler(ticketController.close.bind(ticketController))
 );
 
 /**

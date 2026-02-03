@@ -237,8 +237,8 @@ export class TicketService {
   }
 
   /**
-   * Update only ai_reply_message for the latest worker process of a ticket.
-   * Returns the updated WorkerProcess, or null if ticket not found or has no worker process.
+   * Update only the response draft for a ticket.
+   * Returns the updated ticket or null if not found.
    */
   async updateAiReplyMessage(
     ticketId: number,
@@ -250,6 +250,32 @@ export class TicketService {
     return await prisma.ticket.update({
       where: { id: ticketId },
       data: { replyMadeBy: "HUMAN_AI", responseDraft: draftReplyMessage },
+    });
+  }
+
+  /**
+   * Resolve a ticket by copying the current response draft into response and marking it RESOLVED.
+   */
+  async resolveTicket(ticketId: number, response: string): Promise<Ticket> {
+    return prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        response,
+        status: TicketStatus.RESOLVED,
+      },
+    });
+  }
+
+  /**
+   * Close a ticket by setting its status to CLOSED.
+   * Returns the updated ticket or null if not found.
+   */
+  async closeTicket(ticketId: number): Promise<Ticket | null> {
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) return null;
+    return prisma.ticket.update({
+      where: { id: ticketId },
+      data: { status: TicketStatus.CLOSED },
     });
   }
 
@@ -276,6 +302,7 @@ export class TicketService {
         urgency: triage.urgency,
         responseDraft: triage.response_draft,
         replyMadeBy: "AI",
+        status: TicketStatus.IN_PROGRESS,
       },
     });
   }
