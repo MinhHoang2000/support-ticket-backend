@@ -26,7 +26,6 @@ export interface AIModelConfig {
  */
 export function createChatModel(config: AIModelConfig = {}): ChatOpenAI {
   const apiKey = config?.apiKey ?? process.env.OPENAI_API_KEY;
-  console.log('apiKey', apiKey, process.env.OPENAI_API_KEY);
   if (!apiKey) {
     throw new Error(
       'OpenAI API key is required. Set OPENAI_API_KEY in .env or pass apiKey in config.'
