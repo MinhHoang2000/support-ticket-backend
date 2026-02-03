@@ -2,6 +2,7 @@ import rateLimit, { ipKeyGenerator, Options } from 'express-rate-limit';
 import { Request, Response } from 'express';
 import { ResponseHelper } from '../utils/response';
 import { ErrorCodes } from '../constants/errorCodes';
+import { createRedisStore, isRedisConfigured } from '../lib/redisStore';
 
 /** Default: 100 requests per 60 seconds per IP */
 const DEFAULT_WINDOW_MS = 60 * 1000;
@@ -35,13 +36,19 @@ const defaultHandler = (req: Request, res: Response) => {
  * Default rate limiter: 100 requests per 60 seconds per IP.
  * Identify clients by IP (supports X-Forwarded-For when behind proxy).
  */
+const defaultStore = isRedisConfigured()
+  ? createRedisStore(DEFAULT_WINDOW_MS)
+  : undefined;
+
 export const defaultRateLimiter = rateLimit({
   windowMs: DEFAULT_WINDOW_MS,
   max: DEFAULT_MAX,
+  store: defaultStore,
   keyGenerator: (req, res) => ipKeyGenerator(getClientIp(req)),
   standardHeaders: true,
   legacyHeaders: false,
   handler: defaultHandler,
+  passOnStoreError: true,
 });
 
 export interface RateLimiterOptions {
@@ -68,12 +75,15 @@ export interface RateLimiterOptions {
  */
 export function createRateLimiter(options: RateLimiterOptions = {}) {
   const { windowMs = DEFAULT_WINDOW_MS, max = DEFAULT_MAX, message } = options;
+  const store = isRedisConfigured() ? createRedisStore(windowMs) : undefined;
   const config: Partial<Options> = {
     windowMs,
     max,
+    store,
     keyGenerator: (req, res) => ipKeyGenerator(getClientIp(req)),
     standardHeaders: true,
     legacyHeaders: false,
+    passOnStoreError: true,
     handler: (req, res) => {
       ResponseHelper.error(
         res,

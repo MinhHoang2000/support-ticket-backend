@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler';
+import { requireAuth } from '../../middlewares/auth';
 import ticketsRouter from './tickets';
 import authRouter from './auth';
 import { checkDatabase, checkRedis } from '../../lib/healthCheck';
 
 const router = Router();
 
-// Mount tickets routes
-router.use('/tickets', ticketsRouter);
+// Mount tickets routes (protected: require valid JWT; blacklisted tokens rejected)
+router.use('/tickets', requireAuth, ticketsRouter);
 // Mount auth routes
 router.use('/auth', authRouter);
 

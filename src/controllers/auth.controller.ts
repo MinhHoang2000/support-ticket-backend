@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { authService, AuthServiceError } from '../services/auth.service';
 import { ErrorCodes } from '../constants/errorCodes';
 import type { SignupDto, LoginDto } from '../dtos/auth.dto';
+import { addToBlacklist } from '../lib/tokenBlacklist';
+import { isRedisConfigured } from '../lib/redisStore';
 
 export class AuthController {
   /**
@@ -47,9 +49,15 @@ export class AuthController {
 
   /**
    * POST /auth/logout
-   * Stateless JWT: client should discard the token. Returns 200.
+   * When Redis is configured: blacklist the token so it is rejected until expiry.
+   * Otherwise: client should discard the token. Returns 200.
    */
-  async logout(_req: Request, res: Response): Promise<void> {
+  async logout(req: Request, res: Response): Promise<void> {
+    const auth = req.headers.authorization;
+    if (isRedisConfigured() && auth?.startsWith('Bearer ')) {
+      const token = auth.slice(7).trim();
+      if (token) await addToBlacklist(token).catch(() => {});
+    }
     res.success(null, 'Logged out successfully');
   }
 }
