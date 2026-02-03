@@ -5,12 +5,13 @@ const globalForRedis = globalThis as unknown as { redis: Redis | undefined };
 function createRedisClient(): Redis {
   const host = process.env.REDIS_HOST ?? 'localhost';
   const port = Number(process.env.REDIS_PORT ?? 6379);
-  const password = process.env.REDIS_PASSWORD || undefined;
+  const password = process.env.REDIS_PASSWORD?.trim();
+  const hasPassword = Boolean(password);
 
   const client = new Redis({
     host,
     port,
-    password: password || undefined,
+    ...(hasPassword ? { password } : {}),
     maxRetriesPerRequest: null,
     retryStrategy(times) {
       const delay = Math.min(times * 100, 3000);
