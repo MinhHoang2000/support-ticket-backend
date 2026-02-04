@@ -30,7 +30,7 @@ The following diagram shows the main components and how they interact:
    - `DATABASE_URL` in the form: `postgresql://USER:PASSWORD@HOST:PORT/DATABASE` (for local Prisma/CLI; Compose overrides `HOST` inside the backend container)
    - `JWT_SECRET` for auth
    - `OPENAI_API_KEY` if you use AI features
-   - Optionally `REDIS_PASSWORD` for production Redis
+   - Optionally `REDIS_USER` (default: `default`) and `REDIS_PASSWORD` for Redis auth (recommended in production)
 
 ### Option A: Production-like run (built image)
 

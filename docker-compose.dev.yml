@@ -25,13 +25,16 @@ services:
   redis:
     image: redis:7-alpine
     container_name: tickets_redis_dev
+    environment:
+      REDIS_USER: ${REDIS_USER:-default}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data_dev:/data
-    command: redis-server
+    command: ["sh", "-c", "if [ -n \"$$REDIS_PASSWORD\" ]; then exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes; else exec redis-server --appendonly yes; fi"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli $${REDIS_PASSWORD:+-a \"$$REDIS_PASSWORD\"} ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,6 +58,7 @@ services:
       DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-tickets_db}"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_USER: ${REDIS_USER:-default}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "${PORT:-3000}:${PORT:-3000}"

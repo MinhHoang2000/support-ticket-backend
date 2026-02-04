@@ -24,6 +24,7 @@ services:
     image: redis:7-alpine
     container_name: tickets_redis
     environment:
+      REDIS_USER: ${REDIS_USER:-default}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -60,6 +61,7 @@ services:
       DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-tickets_db}"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_USER: ${REDIS_USER:-default}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
